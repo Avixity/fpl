@@ -36,12 +36,12 @@ def clamp(value: float, minimum: float, maximum: float) -> float:
     return min(maximum, max(minimum, value))
 
 
-@app.get("/health")
+@app.get("/model/health")
 def health() -> dict[str, str]:
     return {"status": "ok", "model_version": "v1.0.0"}
 
 
-@app.post("/v1/project-player", response_model=Projection)
+@app.post("/model/v1/project-player", response_model=Projection)
 def project_player(features: PlayerFeatures) -> Projection:
     average_minutes = clamp(features.minutes / features.completed_gameweeks, 0, 90)
     start_minutes = clamp(features.starts / features.completed_gameweeks, 0, 1) * 90

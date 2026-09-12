@@ -20,3 +20,7 @@ The selected manager and transfer draft are stored only in the browser. Public F
 - `backend/`: optional FastAPI analytics service contract for separating Python model workloads later.
 
 No authenticated FPL writes are performed.
+
+## Vercel deployment
+
+Import this repository with the **Services** preset. `vercel.json` deploys the Next.js app at `/` and the optional FastAPI model service at `/model`. Add `GROQ_API_KEY`, `GROQ_MODEL`, `SUPABASE_URL`, and `SUPABASE_SECRET_KEY` in the Vercel project environment before deploying.

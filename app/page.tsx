@@ -1,6 +1,6 @@
 'use client';
 
-import { FormEvent, useCallback, useEffect, useState } from 'react';
+import { SyntheticEvent, useCallback, useEffect, useState } from 'react';
 import { ArrowRight, Database, LoaderCircle, ShieldCheck } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -24,7 +24,7 @@ export default function Home() {
     setError('');
     try {
       const response = await fetch(`/api/fpl/dashboard?id=${encodeURIComponent(id)}`);
-      const payload = await response.json();
+      const payload = await response.json() as DashboardData & { error?: string };
       if (!response.ok) throw new Error(payload.error ?? 'We could not load that manager.');
       const nextDashboard = payload as DashboardData;
       setDashboard(nextDashboard);
@@ -82,7 +82,7 @@ export default function Home() {
     return () => lifecycle.abort();
   }, [loadManager]);
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  function submit(event: SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
     void loadManager(managerId.trim());
   }
@@ -122,7 +122,7 @@ export default function Home() {
           <form onSubmit={submit}>
             <label htmlFor="manager-id">FPL Manager ID</label>
             <div className="manager-input-row">
-              <Input autoFocus autoComplete="off" id="manager-id" inputMode="numeric" onChange={(event) => setManagerId(event.target.value)} placeholder="e.g. 908661" value={managerId} />
+              <Input autoComplete="off" id="manager-id" inputMode="numeric" onChange={(event) => setManagerId(event.target.value)} placeholder="e.g. 908661" value={managerId} />
               <Button aria-label="Connect manager" disabled={loading} size="icon-lg" type="submit">
                 {loading ? <LoaderCircle className="animate-spin" /> : <ArrowRight />}
               </Button>

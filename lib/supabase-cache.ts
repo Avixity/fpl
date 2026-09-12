@@ -6,7 +6,7 @@ function config() {
   return url && key ? { url, key } : null;
 }
 
-function headers(key: string, extra?: HeadersInit): HeadersInit {
+function headers(key: string, extra?: Record<string, string>): HeadersInit {
   return {
     apikey: key,
     Authorization: `Bearer ${key}`,

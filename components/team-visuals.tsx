@@ -19,7 +19,7 @@ export function TeamBadge({ team, size = 'md' }: { team: TeamSummary; size?: 'sm
       {failed ? (
         <span>{team.short_name}</span>
       ) : (
-        <Image alt="" fill onError={() => setFailed(true)} sizes="38px" src={teamTile(team.short_name)} />
+        <Image alt="" fill onError={() => setFailed(true)} sizes="38px" src={teamTile(team.short_name)} unoptimized />
       )}
     </span>
   );
@@ -66,7 +66,7 @@ export function PlayerVisual({ player, size = 'md' }: { player: PlayerView; size
       {failed ? (
         <span>{player.teamShort}</span>
       ) : (
-        <Image alt={`${player.name}, ${player.team}`} fill onError={handleError} sizes="76px" src={source} />
+        <Image alt={`${player.name}, ${player.team}`} fill onError={handleError} sizes="76px" src={source} unoptimized />
       )}
     </span>
   );

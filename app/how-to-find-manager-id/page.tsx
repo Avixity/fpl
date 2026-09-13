@@ -29,7 +29,7 @@ export default function ManagerIdGuide() {
   return (
     <main className="guide-page">
       <header className="guide-header">
-        <div aria-label="App name reserved" className="brand-reserved" />
+        <div aria-label="FPLnet" className="brand-reserved"><strong>FPL</strong><span>net</span></div>
         <Link className={buttonVariants({ variant: 'ghost' })} href="/"><ArrowLeft /> Back to connection</Link>
       </header>
       <section className="guide-content">

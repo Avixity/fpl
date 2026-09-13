@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { DM_Sans } from 'next/font/google';
 import './globals.css';
 import './visual-system.css';
+import './fplnet-refinement.css';
 
 const dmSans = DM_Sans({
   variable: '--font-ui',
@@ -9,7 +10,7 @@ const dmSans = DM_Sans({
 });
 
 export const metadata: Metadata = {
-  title: 'FPL Decision Dashboard',
+  title: 'FPLnet',
   description: 'Live squad, transfer, prediction and rank tools for FPL managers.',
 };
 

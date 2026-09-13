@@ -35,7 +35,7 @@ export function TeamIdentity({
   size?: 'sm' | 'md' | 'lg';
 }) {
   return (
-    <span className={`club-identity ${compact ? 'club-identity-compact' : ''}`}>
+    <span className={`club-identity club-identity-${size} ${compact ? 'club-identity-compact' : ''}`}>
       <TeamBadge size={size} team={team} />
       <span>{compact ? team.short_name : team.name}</span>
     </span>
@@ -62,7 +62,7 @@ export function PlayerVisual({ player, size = 'md' }: { player: PlayerView; size
   }
 
   return (
-    <span className={`player-visual player-visual-${size}`}>
+    <span className={`player-visual player-visual-${size} ${source === fallback ? 'player-visual-fallback' : ''}`}>
       {failed ? (
         <span>{player.teamShort}</span>
       ) : (

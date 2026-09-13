@@ -102,8 +102,7 @@ export default function Home() {
   return (
     <main className="connect-screen">
       <header className="connect-header">
-        <div aria-label="App name reserved" className="brand-reserved" />
-        <span className="source-status"><span /> Public FPL data</span>
+        <div aria-label="FPLnet" className="brand-reserved"><strong>FPL</strong><span>net</span></div>
       </header>
       <section className="connect-workspace">
         <div className="connect-index">

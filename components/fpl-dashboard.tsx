@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowDownRight, ArrowLeftRight, ArrowRight, ArrowUpRight, BrainCircuit,
   CalendarDays, ChartNoAxesCombined, Check, ChevronRight, ClipboardList, Clock3, Flame,
-  Home, Info, LoaderCircle, Radio, RefreshCw, Search, Sparkles, Trophy,
+  Home, Info, LoaderCircle, Radio, RefreshCw, Search, Settings2, Sparkles, Trophy,
   Users, WandSparkles, Zap,
 } from 'lucide-react';
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip as ChartTooltip, XAxis, YAxis } from 'recharts';
@@ -17,11 +17,13 @@ import {
   FixturePill,
   PlayerVisual,
   PlayerVisualPreferencesProvider,
+  TeamBadge,
   TeamIdentity,
+  usePlayerVisualMode,
   usePlayerVisualPreference,
 } from '@/components/team-visuals';
 import { SquadDraftManager } from '@/components/squad-drafts';
-import type { ChipStatus, DashboardData, FplFixture, PlayerView, SquadPlayer, TransferRecommendation } from '@/lib/fpl-types';
+import type { ChipStatus, DashboardData, FplFixture, PlayerFixture, PlayerView, SquadPlayer, TransferRecommendation } from '@/lib/fpl-types';
 
 type ViewId = 'home' | 'squad' | 'drafts' | 'transfers' | 'players' | 'predictions' | 'fixtures' | 'live' | 'rank';
 
@@ -71,10 +73,38 @@ function FixtureDots({ player, limit = 3 }: { player: PlayerView; limit?: number
   return <div className="fixture-dots">{player.fixtures.slice(0, limit).map((fixture) => <FixturePill fixture={fixture} key={fixture.id} />)}{player.fixtures.length === 0 ? <span className="muted">No fixture</span> : null}</div>;
 }
 
-function pendingLiveFixture(player: SquadPlayer) {
-  const fixture = player.fixtures[0];
-  if (!fixture || player.liveMinutes === null || player.livePoints === null || player.liveMinutes > 0 || player.livePoints !== 0) return null;
-  return fixture;
+function pendingLiveFixtures(player: SquadPlayer, data: DashboardData): PlayerFixture[] {
+  const currentEvent = data.currentEvent;
+  if (!currentEvent || (player.liveMinutes ?? 0) > 0 || (player.livePoints ?? 0) !== 0) return [];
+  const currentFixtures = data.fixtures
+    .filter((fixture) => fixture.event === currentEvent.id
+      && (fixture.team_h === player.teamId || fixture.team_a === player.teamId)
+      && !fixture.finished)
+    .sort((a, b) => (a.kickoff_time ?? '').localeCompare(b.kickoff_time ?? '') || a.id - b.id);
+  if (!currentFixtures.length) return [];
+
+  const teamById = new Map(data.teams.map((team) => [team.id, team]));
+  return currentFixtures.flatMap((fixture) => {
+    const isHome = fixture.team_h === player.teamId;
+    const opponent = teamById.get(isHome ? fixture.team_a : fixture.team_h);
+    if (!opponent) return [];
+    return [{
+      id: fixture.id,
+      event: currentEvent.id,
+      opponentId: opponent.id,
+      opponent: opponent.short_name,
+      opponentName: opponent.name,
+      opponentCode: opponent.code,
+      home: isHome,
+      difficulty: isHome ? fixture.team_h_difficulty : fixture.team_a_difficulty,
+      kickoff: fixture.kickoff_time,
+      projectedPoints: 0,
+    }];
+  });
+}
+
+function SquadFixtureValue({ fixtures }: { fixtures: PlayerFixture[] }) {
+  return <span className="squad-pending-fixtures">{fixtures.map((fixture) => <span className="squad-pending-fixture" key={fixture.id} title={`${fixture.opponentName} ${fixture.home ? 'at home' : 'away'}`}><TeamBadge size="sm" team={{ code: fixture.opponentCode ?? 0, name: fixture.opponentName, short_name: fixture.opponent }} /><strong>{fixture.opponent}</strong><small>{fixture.home ? 'H' : 'A'}</small></span>)}</span>;
 }
 
 function liveSquadValue(player: SquadPlayer, applyMultiplier = true) {
@@ -90,7 +120,8 @@ function PlayerStatus({ player }: { player: PlayerView }) {
 function PlayerDrawer({ player, onClose, allowImageChoice = false }: { player: PlayerView | null; onClose: () => void; allowImageChoice?: boolean }) {
   const [history, setHistory] = useState<Array<Record<string, unknown>>>([]);
   const [loading, setLoading] = useState(false);
-  const { preference, setPreference } = usePlayerVisualPreference(player?.playerCode);
+  const { preference, override, setPreference, clearPreference } = usePlayerVisualPreference(player?.playerCode);
+  const { mode: globalImageMode } = usePlayerVisualMode();
   useEffect(() => {
     if (!player) return;
     setLoading(true);
@@ -100,7 +131,7 @@ function PlayerDrawer({ player, onClose, allowImageChoice = false }: { player: P
       .catch(() => setHistory([]))
       .finally(() => setLoading(false));
   }, [player]);
-  return <Sheet open={Boolean(player)} onOpenChange={(open) => { if (!open) onClose(); }}><SheetContent className="player-sheet sm:max-w-lg">{player ? <><SheetHeader className="sheet-head"><PlayerVisual player={player} size="lg" /><SheetTitle className="text-4xl">{player.name}</SheetTitle><SheetDescription>{player.fullName} · {player.team} · {player.position}</SheetDescription></SheetHeader><div className="sheet-body">{allowImageChoice ? <section className="player-image-choice"><div><span>Squad image</span><strong>Choose this player&apos;s visual</strong><small>Missing photos automatically use the current {player.team} shirt. Select the shirt when an official photo still shows a previous club.</small></div><fieldset aria-label="Player image preference" className="image-choice-toggle"><button aria-pressed={preference === 'photo'} className={preference === 'photo' ? 'active' : ''} onClick={() => setPreference('photo')} type="button">Player photo</button><button aria-pressed={preference === 'shirt'} className={preference === 'shirt' ? 'active' : ''} onClick={() => setPreference('shirt')} type="button">Current shirt</button></fieldset></section> : null}<div className="sheet-price"><span>Current price</span><strong>{money(player.price)}</strong></div><div className="mini-stat-grid"><Stat label="Season points" value={displayNumber(player.points)} /><Stat label="Ownership" value={`${player.ownership.toFixed(1)}%`} /><Stat label="Next xPts" value={player.projection.next.toFixed(1)} /><Stat label="Expected mins" value={player.projection.expectedMinutes} /></div><section className="sheet-section"><h3>Upcoming fixtures</h3><FixtureDots player={player} limit={5} /></section><section className="sheet-section"><h3>Season output</h3><dl className="detail-list"><div><dt>Goals</dt><dd>{player.goals}</dd></div><div><dt>Assists</dt><dd>{player.assists}</dd></div><div><dt>Expected goals</dt><dd>{player.expectedGoals.toFixed(2)}</dd></div><div><dt>Expected assists</dt><dd>{player.expectedAssists.toFixed(2)}</dd></div><div><dt>Clean sheets</dt><dd>{player.cleanSheets}</dd></div><div><dt>Bonus</dt><dd>{player.bonus}</dd></div></dl></section><section className="sheet-section"><h3>Recent gameweeks</h3>{loading ? <LoaderCircle className="animate-spin text-primary" /> : history.length ? <div className="history-list">{history.map((item, index) => <div key={`${typeof item.fixture === 'number' ? item.fixture : 'fixture'}-${index}`}><span>GW {typeof item.round === 'number' ? item.round : '—'} · {item.was_home === true ? 'Home' : 'Away'}</span><strong>{typeof item.total_points === 'number' ? item.total_points : '—'} pts</strong></div>)}</div> : <p className="muted">History unavailable.</p>}</section>{player.news ? <p className="news-note"><Info /> {player.news}</p> : null}</div></> : null}</SheetContent></Sheet>;
+  return <Sheet open={Boolean(player)} onOpenChange={(open) => { if (!open) onClose(); }}><SheetContent className="player-sheet sm:max-w-lg">{player ? <><SheetHeader className="sheet-head"><PlayerVisual player={player} size="lg" /><SheetTitle className="text-4xl">{player.name}</SheetTitle><SheetDescription>{player.fullName} · {player.team} · {player.position}</SheetDescription></SheetHeader><div className="sheet-body">{allowImageChoice ? <section className="player-image-choice"><div><span>Squad image</span><strong>Choose this player&apos;s visual</strong><small>{override ? 'This player has a custom image choice.' : `Using the squad setting: ${globalImageMode === 'shirt' ? 'current team shirts' : 'player photos'}.`} Official portraits can still show a previous club after a transfer.</small></div><fieldset aria-label="Player image preference" className="image-choice-toggle"><button aria-pressed={preference === 'photo'} className={preference === 'photo' ? 'active' : ''} onClick={() => setPreference('photo')} type="button">Player photo</button><button aria-pressed={preference === 'shirt'} className={preference === 'shirt' ? 'active' : ''} onClick={() => setPreference('shirt')} type="button">Current shirt</button></fieldset>{override ? <button className="use-global-image" onClick={clearPreference} type="button">Use squad setting</button> : null}</section> : null}<div className="sheet-price"><span>Current price</span><strong>{money(player.price)}</strong></div><div className="mini-stat-grid"><Stat label="Season points" value={displayNumber(player.points)} /><Stat label="Ownership" value={`${player.ownership.toFixed(1)}%`} /><Stat label="Next xPts" value={player.projection.next.toFixed(1)} /><Stat label="Expected mins" value={player.projection.expectedMinutes} /></div><section className="sheet-section"><h3>Upcoming fixtures</h3><FixtureDots player={player} limit={5} /></section><section className="sheet-section"><h3>Season output</h3><dl className="detail-list"><div><dt>Goals</dt><dd>{player.goals}</dd></div><div><dt>Assists</dt><dd>{player.assists}</dd></div><div><dt>Expected goals</dt><dd>{player.expectedGoals.toFixed(2)}</dd></div><div><dt>Expected assists</dt><dd>{player.expectedAssists.toFixed(2)}</dd></div><div><dt>Clean sheets</dt><dd>{player.cleanSheets}</dd></div><div><dt>Bonus</dt><dd>{player.bonus}</dd></div></dl></section><section className="sheet-section"><h3>Recent gameweeks</h3>{loading ? <LoaderCircle className="animate-spin text-primary" /> : history.length ? <div className="history-list">{history.map((item, index) => <div key={`${typeof item.fixture === 'number' ? item.fixture : 'fixture'}-${index}`}><span>GW {typeof item.round === 'number' ? item.round : '—'} · {item.was_home === true ? 'Home' : 'Away'}</span><strong>{typeof item.total_points === 'number' ? item.total_points : '—'} pts</strong></div>)}</div> : <p className="muted">History unavailable.</p>}</section>{player.news ? <p className="news-note"><Info /> {player.news}</p> : null}</div></> : null}</SheetContent></Sheet>;
 }
 
 function chipText(chip: ChipStatus) {
@@ -125,16 +156,29 @@ function HomeView({ data, selectPlayer, go }: { data: DashboardData; selectPlaye
   return <><PageHeading kicker={`${data.nextEvent?.name ?? 'Next gameweek'} · ${deadlineLabel(data.nextEvent?.deadline_time)}`} title={timeGreeting(data.manager.player_first_name)} aside={<span className="data-stamp">Updated {new Date(data.generatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>} /><section className="scoreboard"><Stat label={`${data.currentEvent?.name ?? 'Current GW'} points`} value={displayNumber(data.manager.summary_event_points)} detail={`GW rank ${displayNumber(data.manager.summary_event_rank)}`} /><Stat label="Overall rank" value={displayNumber(data.manager.summary_overall_rank)} detail={rankMove === null ? 'Movement unavailable' : <span className={rankMove >= 0 ? 'positive' : 'negative'}>{rankMove >= 0 ? '↑' : '↓'} {Math.abs(rankMove).toLocaleString()}</span>} /><Stat label="Team value" value={money(data.manager.last_deadline_value / 10)} detail={`${money(data.manager.last_deadline_bank / 10)} in bank`} /><Stat label="Published squad" value={`GW${data.publishedGameweek}`} detail={`${flagged} availability flag${flagged === 1 ? '' : 's'}`} /></section><div className="dashboard-grid"><section className="panel decision-panel"><div className="panel-head"><div><p className="eyebrow">Best model move</p><h2>Transfer signal</h2></div><Button variant="ghost" size="sm" onClick={() => go('transfers')}>Open lab <ArrowRight /></Button></div>{recommendation ? <div className="transfer-feature"><button onClick={() => selectPlayer(recommendation.out)} type="button"><PlayerVisual player={recommendation.out} size="lg" /><small>Sell</small><strong>{recommendation.out.name}</strong><em>{recommendation.out.projection.next3.toFixed(1)} xPts / 3</em></button><div className="transfer-arrow"><ArrowRight /><span>+{recommendation.projectedGain3.toFixed(1)}</span></div><button onClick={() => selectPlayer(recommendation.incoming)} type="button"><PlayerVisual player={recommendation.incoming} size="lg" /><small>Buy</small><strong>{recommendation.incoming.name}</strong><em>{recommendation.incoming.projection.next3.toFixed(1)} xPts / 3</em></button></div> : <p className="empty-copy">No valid positive transfer was found within the estimated public-data budget.</p>}<p className="model-footnote">Uses current price as estimated selling price. Confirm your exact sale value in FPL.</p></section><section className="panel captain-panel"><div className="panel-head"><div><p className="eyebrow">Next deadline</p><h2>Captain model</h2></div><Button variant="ghost" size="icon-sm" onClick={() => go('predictions')}><ChevronRight /></Button></div>{topCaptain ? <button className="captain-feature" onClick={() => selectPlayer(topCaptain)} type="button"><span className="captain-badge">C</span><PlayerVisual player={topCaptain} size="sm" /><div><strong>{topCaptain.name}</strong><span>{topCaptain.team} · {topCaptain.projection.expectedMinutes} expected mins</span></div><em>{topCaptain.projection.next.toFixed(1)}<small>xPts</small></em></button> : <p className="empty-copy">Captain projection unavailable.</p>}<div className="ranked-mini-list">{data.captainRankings.slice(1, 4).map((player, index) => <button key={player.id} onClick={() => selectPlayer(player)} type="button"><span>0{index + 2}</span><strong>{player.name}</strong><em>{player.projection.next.toFixed(1)}</em></button>)}</div></section><section className="panel fixture-panel"><div className="panel-head"><div><p className="eyebrow">Schedule</p><h2>{data.nextEvent?.name ?? 'Next fixtures'}</h2></div><Button variant="ghost" size="sm" onClick={() => go('fixtures')}>Full fixture hub <ArrowRight /></Button></div><div className="fixture-list">{nextFixtures.length ? nextFixtures.map((fixture) => { const home = teams.get(fixture.team_h); const away = teams.get(fixture.team_a); return home && away ? <div key={fixture.id}><TeamIdentity compact size="sm" team={home} /><strong>vs</strong><TeamIdentity compact size="sm" team={away} /><small>{fixture.kickoff_time ? new Date(fixture.kickoff_time).toLocaleString([], { weekday: 'short', hour: '2-digit', minute: '2-digit' }) : 'TBC'}</small></div> : null; }) : <p className="empty-copy">Fixtures unavailable.</p>}</div></section></div><ChipsPanel chips={data.chipStatuses} /></>;
 }
 
-function SquadTile({ player, mode, selectPlayer }: { player: SquadPlayer; mode: 'xpts' | 'live' | 'price'; selectPlayer: (player: PlayerView) => void }) {
-  const pendingFixture = pendingLiveFixture(player);
+function SquadTile({ player, mode, pendingFixtures, selectPlayer }: { player: SquadPlayer; mode: 'xpts' | 'live' | 'price'; pendingFixtures: PlayerFixture[]; selectPlayer: (player: PlayerView) => void }) {
   const value = mode === 'live'
-    ? pendingFixture
-      ? <FixturePill fixture={pendingFixture} />
-      : liveSquadValue(player)
+    ? liveSquadValue(player)
     : mode === 'price'
       ? `£${player.price.toFixed(1)}`
       : player.projection.next.toFixed(1);
-  return <button className="squad-tile" onClick={() => selectPlayer(player)} type="button">{player.captain || player.viceCaptain ? <span aria-label={player.captain ? 'Captain' : 'Vice captain'} className={`squad-role ${player.captain ? 'squad-role-captain' : 'squad-role-vice'}`}>{player.captain ? 'C' : 'VC'}</span> : null}<PlayerVisual player={player} size="pitch" /><span className="tile-name">{player.name}</span><span className="tile-team" title={player.team}>{player.team}</span><span className={`tile-value ${mode === 'live' && pendingFixture ? 'tile-value-fixture' : ''}`}>{value}</span><PlayerStatus player={player} /></button>;
+  return <button className="squad-tile" onClick={() => selectPlayer(player)} type="button">{player.captain || player.viceCaptain ? <span aria-label={player.captain ? 'Captain' : 'Vice captain'} className={`squad-role ${player.captain ? 'squad-role-captain' : 'squad-role-vice'}`}>{player.captain ? 'C' : 'VC'}</span> : null}<PlayerVisual player={player} size="pitch" /><span className="tile-name">{player.name}</span><span className="tile-team" title={player.team}>{player.team}</span><span className="tile-value">{mode === 'live' && pendingFixtures.length ? <SquadFixtureValue fixtures={pendingFixtures} /> : value}</span><PlayerStatus player={player} /></button>;
+}
+
+function SquadLiveSummary({ data }: { data: DashboardData }) {
+  const scoreEvent = data.currentEvent ?? data.events.find((event) => event.id === data.publishedGameweek) ?? null;
+  const points = data.liveTotal ?? data.entryHistory?.points ?? data.manager.summary_event_points;
+  const transfers = data.entryHistory?.event_transfers;
+  const transferCost = data.entryHistory?.event_transfers_cost ?? 0;
+  const compactNumber = (value: number | null | undefined) => typeof value === 'number' ? value.toLocaleString() : '—';
+  return <section aria-label={`${scoreEvent?.name ?? 'Current gameweek'} live summary`} className="squad-live-summary"><div className="squad-live-side squad-live-average"><span>Average</span><strong>{compactNumber(scoreEvent?.average_entry_score)}</strong></div><div className="squad-live-primary"><span>{scoreEvent?.name ?? `GW${data.publishedGameweek}`}</span><strong>{compactNumber(points)}</strong><small>Live points</small></div><div className="squad-live-side squad-live-highest"><span>Highest</span><strong>{compactNumber(scoreEvent?.highest_score)}</strong></div><div className="squad-live-transfers"><span>Transfers used</span><strong>{compactNumber(transfers)}</strong>{transferCost > 0 ? <small>−{transferCost} pts</small> : null}</div></section>;
+}
+
+function SquadImageSettings() {
+  const [open, setOpen] = useState(false);
+  const { mode, setMode, overrides } = usePlayerVisualMode();
+  const overrideCount = Object.keys(overrides).length;
+  return <><Button aria-label="Open player image settings" className="squad-image-settings-trigger" onClick={() => setOpen(true)} size="sm" title="Player image settings" variant="outline"><Settings2 /><span>Images</span></Button><Sheet onOpenChange={setOpen} open={open}><SheetContent className="squad-settings-sheet sm:max-w-md"><SheetHeader className="squad-settings-head"><p className="eyebrow">Player appearance</p><SheetTitle>Player images</SheetTitle><SheetDescription>Set the default image style across FPLnet. You can still customise one player by opening their card in Squad.</SheetDescription></SheetHeader><div className="squad-settings-body"><fieldset aria-label="Default player image style" className="squad-image-options"><button aria-pressed={mode === 'photo'} className={mode === 'photo' ? 'active' : ''} onClick={() => setMode('photo')} type="button"><span className="image-option-mark">01</span><strong>Player photos</strong><small>Use official Premier League portraits when available.</small><Check /></button><button aria-pressed={mode === 'shirt'} className={mode === 'shirt' ? 'active' : ''} onClick={() => setMode('shirt')} type="button"><span className="image-option-mark">02</span><strong>Current team shirts</strong><small>Always match the club currently assigned by FPL.</small><Check /></button></fieldset><p className="squad-settings-note"><Info /> Official portraits can still show a previous club after a transfer. Current team shirts always use the latest club in FPL data.</p>{overrideCount ? <p className="squad-settings-overrides">{overrideCount} custom player {overrideCount === 1 ? 'choice is' : 'choices are'} active. Select either style above to apply it to every player.</p> : null}</div></SheetContent></Sheet></>;
 }
 
 function SquadView({ data, selectPlayer }: { data: DashboardData; selectPlayer: (player: PlayerView) => void }) {
@@ -142,7 +186,7 @@ function SquadView({ data, selectPlayer }: { data: DashboardData; selectPlayer: 
   const starters = data.squad.filter((player) => player.squadPosition <= 11);
   const bench = data.squad.filter((player) => player.squadPosition > 11).sort((a, b) => a.squadPosition - b.squadPosition);
   const rows = [1, 2, 3, 4].map((positionId) => starters.filter((player) => player.positionId === positionId));
-  return <><PageHeading kicker={`Published ${data.currentEvent?.name ?? `GW${data.publishedGameweek}`} squad · ${data.manager.name}`} title="Squad" aside={<div className="segmented">{([['live', 'Live'], ['price', 'Price'], ['xpts', 'Next xPts']] as const).map(([id, label]) => <button className={mode === id ? 'active' : ''} key={id} onClick={() => setMode(id)} type="button">{label}</button>)}</div>} /><div className="squad-layout"><section className="pitch" aria-label="Published squad formation"><div className="pitch-circle" /><div className="pitch-box top" /><div className="pitch-box bottom" />{rows.map((row, rowIndex) => <div className="pitch-row" key={rowIndex}>{row.map((player) => <SquadTile key={player.id} mode={mode} player={player} selectPlayer={selectPlayer} />)}</div>)}</section><aside className="bench-panel"><div className="panel-head"><div><p className="eyebrow">Order matters</p><h2>Bench</h2></div></div>{bench.map((player, index) => { const pendingFixture = pendingLiveFixture(player); return <button className="bench-row" key={player.id} onClick={() => selectPlayer(player)} type="button"><span>0{index + 1}</span><PlayerVisual player={player} size="sm" /><div><strong>{player.name}</strong><small>{player.position} · {player.team}</small></div><em>{mode === 'price' ? money(player.price) : mode === 'live' ? pendingFixture ? <FixturePill fixture={pendingFixture} /> : liveSquadValue(player, false) : `${player.projection.next.toFixed(1)} xPts`}</em></button>; })}<div className="bench-note"><Info /> This is the last published squad. Saved transfer drafts do not change it.</div></aside></div></>;
+  return <><PageHeading kicker={`Published ${data.currentEvent?.name ?? `GW${data.publishedGameweek}`} squad · ${data.manager.name}`} title="Squad" aside={<div className="squad-heading-actions"><div className="segmented">{([['live', 'Live'], ['price', 'Price'], ['xpts', 'Next xPts']] as const).map(([id, label]) => <button className={mode === id ? 'active' : ''} key={id} onClick={() => setMode(id)} type="button">{label}</button>)}</div><SquadImageSettings /></div>} /><SquadLiveSummary data={data} /><div className="squad-layout"><section className="pitch" aria-label="Published squad formation"><div className="pitch-circle" /><div className="pitch-box top" /><div className="pitch-box bottom" />{rows.map((row, rowIndex) => <div className="pitch-row" key={rowIndex}>{row.map((player) => <SquadTile key={player.id} mode={mode} pendingFixtures={pendingLiveFixtures(player, data)} player={player} selectPlayer={selectPlayer} />)}</div>)}</section><aside className="bench-panel"><div className="panel-head"><div><p className="eyebrow">Order matters</p><h2>Bench</h2></div></div>{bench.map((player, index) => { const pendingFixtures = pendingLiveFixtures(player, data); return <button className="bench-row" key={player.id} onClick={() => selectPlayer(player)} type="button"><span>0{index + 1}</span><PlayerVisual player={player} size="sm" /><div><strong>{player.name}</strong><small>{player.position} · {player.team}</small></div><em>{mode === 'price' ? money(player.price) : mode === 'live' && pendingFixtures.length ? <SquadFixtureValue fixtures={pendingFixtures} /> : mode === 'live' ? liveSquadValue(player, false) : `${player.projection.next.toFixed(1)} xPts`}</em></button>; })}<div className="bench-note"><Info /> This is the last published squad. Saved transfer drafts do not change it.</div></aside></div></>;
 }
 
 function RecommendationRow({ item, choose }: { item: TransferRecommendation; choose: (item: TransferRecommendation) => void }) {

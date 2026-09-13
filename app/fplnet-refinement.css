@@ -42,6 +42,11 @@
   background: var(--surface-0);
 }
 
+.app-topbar {
+  height: 62px;
+  padding-inline: clamp(18px, 2.6vw, 38px);
+}
+
 .desktop-nav {
   background: #081a23;
 }
@@ -99,6 +104,47 @@
   background: #b9dedc;
 }
 
+.squad-pending-fixtures,
+.squad-pending-fixture {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.squad-pending-fixtures {
+  width: 100%;
+  gap: 5px;
+}
+
+.squad-pending-fixture {
+  min-width: 0;
+  gap: 3px;
+  color: #06141b;
+  line-height: 1;
+}
+
+.squad-pending-fixture .team-badge {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+  border-radius: 4px;
+}
+
+.squad-pending-fixture strong {
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.squad-pending-fixture small {
+  color: currentColor;
+  font-size: 9px;
+  opacity: .68;
+}
+
+.bench-row em .squad-pending-fixtures {
+  justify-content: flex-end;
+}
+
 .tile-team {
   width: 100%;
   padding: 1px 6px 5px;
@@ -110,25 +156,6 @@
   line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.tile-value-fixture {
-  min-height: 35px;
-  padding: 2px;
-  display: grid;
-  place-items: center;
-  background: var(--surface-0);
-}
-
-.tile-value-fixture .fixture-pill {
-  min-height: 29px;
-  max-width: 100%;
-  padding: 3px 6px 3px 4px;
-}
-
-.tile-value-fixture .team-badge {
-  width: 22px;
-  height: 22px;
 }
 
 .squad-role {
@@ -245,9 +272,175 @@
   color: #06141b;
 }
 
+.use-global-image {
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--ink-2);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.use-global-image:hover {
+  border-color: rgb(185 222 220 / 50%);
+  color: var(--ink-1);
+}
+
+.squad-heading-actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.squad-image-settings-trigger {
+  height: 42px;
+  gap: 7px;
+  border-color: var(--line);
+  background: var(--surface-1);
+  color: var(--ink-2);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.squad-image-settings-trigger:hover {
+  border-color: rgb(185 222 220 / 55%);
+  background: var(--surface-2);
+  color: var(--ink-1);
+}
+
+.squad-image-settings-trigger svg {
+  width: 17px;
+  height: 17px;
+}
+
+.squad-settings-sheet {
+  width: min(92vw, 450px) !important;
+  overflow-y: auto;
+  border-color: var(--line);
+  background: var(--surface-1);
+  color: var(--ink-1);
+}
+
+.squad-settings-head {
+  padding: 30px 28px 22px;
+  gap: 6px;
+  border-bottom: 1px solid var(--line);
+}
+
+.squad-settings-head [data-slot='sheet-title'] {
+  font-size: 34px;
+  font-weight: 760;
+  letter-spacing: -.03em;
+  line-height: 1;
+}
+
+.squad-settings-head [data-slot='sheet-description'] {
+  max-width: 34ch;
+  color: var(--ink-3);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.squad-settings-body {
+  padding: 24px 28px 36px;
+}
+
+.squad-image-options {
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+  border: 0;
+}
+
+.squad-image-options button {
+  position: relative;
+  min-height: 112px;
+  padding: 18px 48px 18px 18px;
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  align-content: center;
+  column-gap: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--ink-1);
+  text-align: left;
+  cursor: pointer;
+}
+
+.squad-image-options button:hover {
+  border-color: rgb(185 222 220 / 45%);
+}
+
+.squad-image-options button.active {
+  border-color: #b9dedc;
+  box-shadow: inset 3px 0 #b9dedc;
+}
+
+.image-option-mark {
+  grid-row: 1 / 3;
+  align-self: start;
+  color: var(--glacier);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: .08em;
+}
+
+.squad-image-options strong {
+  font-size: 16px;
+}
+
+.squad-image-options small {
+  margin-top: 5px;
+  color: var(--ink-3);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.squad-image-options svg {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 19px;
+  height: 19px;
+  opacity: 0;
+  color: #b9dedc;
+}
+
+.squad-image-options button.active svg {
+  opacity: 1;
+}
+
+.squad-settings-note,
+.squad-settings-overrides {
+  margin: 18px 0 0;
+  color: var(--ink-3);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.squad-settings-note {
+  display: flex;
+  gap: 9px;
+}
+
+.squad-settings-note svg {
+  width: 17px;
+  height: 17px;
+  flex: 0 0 auto;
+}
+
+.squad-settings-overrides {
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
 .app-shell[data-view='squad'] .app-content {
-  padding-top: clamp(20px, 3vh, 32px);
-  padding-bottom: 30px;
+  padding-top: clamp(18px, 2.5vh, 28px);
+  padding-bottom: 48px;
 }
 
 .app-shell[data-view='squad'] .page-heading {
@@ -259,17 +452,112 @@
 }
 
 .squad-layout {
-  grid-template-columns: minmax(0, 1fr) minmax(292px, 330px);
+  grid-template-columns: minmax(680px, 1fr) minmax(292px, 320px);
+  gap: 16px;
+}
+
+.squad-live-summary {
+  margin-bottom: 16px;
+  display: grid;
+  grid-template-columns: 1fr minmax(170px, 1.15fr) 1fr;
+  grid-template-areas:
+    'average total highest'
+    'transfers transfers transfers';
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-1);
+}
+
+.squad-live-side,
+.squad-live-primary {
+  min-height: 88px;
+  padding: 12px 18px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.squad-live-average {
+  grid-area: average;
+}
+
+.squad-live-highest {
+  grid-area: highest;
+}
+
+.squad-live-primary {
+  grid-area: total;
+  min-height: 98px;
+  border-inline: 1px solid rgb(6 20 27 / 14%);
+  background: #b9dedc;
+  color: #06141b;
+}
+
+.squad-live-side > span,
+.squad-live-primary > span,
+.squad-live-transfers > span {
+  color: var(--ink-3);
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
+.squad-live-primary > span,
+.squad-live-primary > small {
+  color: rgb(6 20 27 / 72%);
+}
+
+.squad-live-side > strong {
+  margin-top: 5px;
+  font-size: 28px;
+  line-height: 1;
+}
+
+.squad-live-primary > strong {
+  margin-top: 2px;
+  font-size: 43px;
+  font-weight: 800;
+  letter-spacing: -.04em;
+  line-height: 1;
+}
+
+.squad-live-primary > small {
+  margin-top: 3px;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.squad-live-transfers {
+  grid-area: transfers;
+  min-height: 35px;
+  padding: 7px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-top: 1px solid var(--line);
+}
+
+.squad-live-transfers strong {
+  font-size: 14px;
+}
+
+.squad-live-transfers small {
+  color: var(--red);
+  font-size: 12px;
 }
 
 .app-shell[data-view='squad'] .pitch {
-  height: clamp(590px, calc(100svh - 220px), 700px);
-  min-height: 0;
-  padding: 18px 22px;
+  height: clamp(700px, calc(100svh - 170px), 840px);
+  min-height: 700px;
+  padding: 28px 24px;
 }
 
 .app-shell[data-view='squad'] .pitch-row {
-  min-height: 0;
+  min-height: 145px;
   flex: 1 1 25%;
 }
 
@@ -403,19 +691,30 @@
   font-size: 12px;
 }
 
-@media (max-width: 1220px) {
+@media (max-width: 1360px) {
   .squad-layout {
     grid-template-columns: 1fr;
   }
 
+  .app-shell[data-view='squad'] .pitch {
+    height: auto;
+    min-height: 740px;
+  }
+
   .bench-panel {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .bench-panel .panel-head,
   .bench-note {
     grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 1120px) {
+  .bench-panel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -767,6 +1066,15 @@
 }
 
 @media (max-width: 860px) {
+  .app-topbar {
+    height: 56px;
+    padding-inline: 14px;
+  }
+
+  .app-shell[data-view='squad'] .app-content {
+    padding: 18px 16px calc(92px + env(safe-area-inset-bottom));
+  }
+
   .connect-workspace {
     min-height: 0;
   }
@@ -793,7 +1101,9 @@
   }
 
   .mobile-nav {
-    grid-template-columns: repeat(9, minmax(62px, 1fr));
+    min-height: 62px;
+    padding: 5px 6px max(5px, env(safe-area-inset-bottom));
+    grid-template-columns: repeat(9, minmax(58px, 1fr));
     scroll-behavior: smooth;
     scroll-snap-type: x proximity;
     scrollbar-width: none;
@@ -859,35 +1169,95 @@
     font-size: 10px;
   }
 
+  .app-shell[data-view='squad'] .page-heading {
+    display: grid;
+    grid-template-columns: 1fr;
+    align-items: start;
+    gap: 12px;
+  }
+
+  .app-shell[data-view='squad'] .page-heading > div:last-child,
+  .squad-heading-actions {
+    width: 100%;
+  }
+
+  .squad-heading-actions .segmented {
+    min-width: 0;
+    flex: 1;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .squad-heading-actions .segmented button {
+    min-width: 0;
+    height: 42px;
+    padding-inline: 7px;
+  }
+
+  .squad-image-settings-trigger {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+  }
+
+  .squad-image-settings-trigger span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+
+  .squad-live-side,
+  .squad-live-primary {
+    min-height: 76px;
+    padding: 9px 5px;
+  }
+
+  .squad-live-primary {
+    min-height: 86px;
+  }
+
+  .squad-live-side > strong {
+    font-size: 23px;
+  }
+
+  .squad-live-primary > strong {
+    font-size: 35px;
+  }
+
+  .squad-live-side > span,
+  .squad-live-primary > span,
+  .squad-live-transfers > span {
+    font-size: 9px;
+  }
+
+  .squad-settings-sheet {
+    width: 100% !important;
+  }
+
+  .squad-settings-head,
+  .squad-settings-body {
+    padding-inline: 20px;
+  }
+
   .app-shell[data-view='squad'] .pitch {
     height: auto;
-    min-height: 720px;
-    padding: 34px 8px;
+    width: calc(100% + 32px);
+    min-height: 800px;
+    margin-inline: -16px;
+    padding: 36px 10px;
+    border-radius: 0;
   }
 
   .app-shell[data-view='squad'] .pitch-row {
-    min-height: 132px;
+    min-height: 150px;
+    gap: 2px;
   }
 
   .app-shell[data-view='squad'] .player-visual-pitch {
     width: 48px;
     height: 54px;
-  }
-
-  .app-shell[data-view='squad'] .tile-value-fixture .fixture-pill {
-    width: 100%;
-    min-width: 0;
-    gap: 2px;
-    padding: 2px;
-  }
-
-  .app-shell[data-view='squad'] .tile-value-fixture .team-badge {
-    width: 18px;
-    height: 18px;
-  }
-
-  .app-shell[data-view='squad'] .tile-value-fixture .fixture-pill strong {
-    font-size: 9px;
   }
 
   .squad-drafts-header {
@@ -952,7 +1322,7 @@
   }
 }
 
-@media (min-width: 1221px) and (max-height: 780px) {
+@media (min-width: 1361px) and (max-height: 780px) {
   .app-shell[data-view='squad'] .app-content {
     padding-top: 12px;
     padding-bottom: 12px;
@@ -967,21 +1337,17 @@
   }
 
   .app-shell[data-view='squad'] .pitch {
-    height: calc(100svh - 194px);
-    min-height: 520px;
-    padding: 10px 18px;
+    height: 680px;
+    min-height: 680px;
+    padding: 22px 20px;
   }
 
   .app-shell[data-view='squad'] .player-visual-pitch {
-    width: 52px;
-    height: 58px;
+    width: 58px;
+    height: 65px;
   }
 
   .app-shell[data-view='squad'] .tile-name {
     padding-block: 3px 2px;
-  }
-
-  .app-shell[data-view='squad'] .tile-value-fixture {
-    min-height: 30px;
   }
 }

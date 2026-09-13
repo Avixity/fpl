@@ -7,18 +7,29 @@ import type { FplTeam, PlayerFixture, PlayerView } from '@/lib/fpl-types';
 type TeamSummary = Pick<FplTeam, 'name' | 'short_name' | 'code'>;
 export type PlayerVisualPreference = 'photo' | 'shirt';
 
-const PLAYER_VISUAL_STORAGE_KEY = 'fplnet_player_visual_preferences_v1';
+const DEFAULT_PLAYER_VISUAL_MODE: PlayerVisualPreference = 'shirt';
+const PLAYER_VISUAL_STORAGE_KEY = 'fplnet_player_visual_settings_v2';
 
 type PlayerVisualPreferences = Record<string, PlayerVisualPreference>;
+type PlayerVisualSettings = {
+  defaultMode: PlayerVisualPreference;
+  overrides: PlayerVisualPreferences;
+};
 
 type PlayerVisualContextValue = {
+  defaultMode: PlayerVisualPreference;
   preferences: PlayerVisualPreferences;
+  setDefaultMode: (mode: PlayerVisualPreference) => void;
   setPreference: (playerCode: number, preference: PlayerVisualPreference) => void;
+  clearPreference: (playerCode: number) => void;
 };
 
 const PlayerVisualContext = createContext<PlayerVisualContextValue>({
+  defaultMode: DEFAULT_PLAYER_VISUAL_MODE,
   preferences: {},
+  setDefaultMode: () => undefined,
   setPreference: () => undefined,
+  clearPreference: () => undefined,
 });
 
 function teamTile(shortName: string) {
@@ -31,28 +42,50 @@ function teamShirt(player: PlayerView) {
   return `https://fantasy.premierleague.com/dist/img/shirts/standard/shirt_${player.teamCode}${goalkeeper}-110.webp`;
 }
 
-function parsePreferences(raw: string | null): PlayerVisualPreferences {
-  if (!raw) return {};
+function isPlayerVisualPreference(value: unknown): value is PlayerVisualPreference {
+  return value === 'photo' || value === 'shirt';
+}
+
+function validPreferences(value: unknown): PlayerVisualPreferences {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return {};
+  return Object.fromEntries(
+    Object.entries(value).filter(
+      (entry): entry is [string, PlayerVisualPreference] =>
+        Number.isSafeInteger(Number(entry[0])) && Number(entry[0]) > 0 && isPlayerVisualPreference(entry[1]),
+    ),
+  );
+}
+
+function parseSettings(raw: string | null): PlayerVisualSettings | null {
+  if (!raw) return null;
   try {
     const parsed: unknown = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
-    return Object.fromEntries(
-      Object.entries(parsed).filter((entry): entry is [string, PlayerVisualPreference] => entry[1] === 'photo' || entry[1] === 'shirt'),
-    );
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+    const candidate = parsed as Record<string, unknown>;
+    if (!isPlayerVisualPreference(candidate.defaultMode)) return null;
+    return {
+      defaultMode: candidate.defaultMode,
+      overrides: validPreferences(candidate.overrides),
+    };
   } catch {
-    return {};
+    return null;
   }
 }
 
 export function PlayerVisualPreferencesProvider({ children }: { children: ReactNode }) {
-  const [preferences, setPreferences] = useState<PlayerVisualPreferences>({});
+  const [settings, setSettings] = useState<PlayerVisualSettings>({
+    defaultMode: DEFAULT_PLAYER_VISUAL_MODE,
+    overrides: {},
+  });
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     try {
-      setPreferences(parsePreferences(window.localStorage.getItem(PLAYER_VISUAL_STORAGE_KEY)));
+      const stored = parseSettings(window.localStorage.getItem(PLAYER_VISUAL_STORAGE_KEY));
+      setSettings(stored ?? { defaultMode: DEFAULT_PLAYER_VISUAL_MODE, overrides: {} });
+      window.localStorage.removeItem('fplnet_player_visual_preferences_v1');
     } catch {
-      setPreferences({});
+      setSettings({ defaultMode: DEFAULT_PLAYER_VISUAL_MODE, overrides: {} });
     }
     setLoaded(true);
   }, []);
@@ -60,27 +93,60 @@ export function PlayerVisualPreferencesProvider({ children }: { children: ReactN
   useEffect(() => {
     if (!loaded) return;
     try {
-      window.localStorage.setItem(PLAYER_VISUAL_STORAGE_KEY, JSON.stringify(preferences));
+      window.localStorage.setItem(PLAYER_VISUAL_STORAGE_KEY, JSON.stringify(settings));
     } catch {
       // A blocked local store should not stop squad images from rendering.
     }
-  }, [loaded, preferences]);
+  }, [loaded, settings]);
 
-  const setPreference = useCallback((playerCode: number, preference: PlayerVisualPreference) => {
-    setPreferences((current) => ({ ...current, [String(playerCode)]: preference }));
+  const setDefaultMode = useCallback((defaultMode: PlayerVisualPreference) => {
+    setSettings({ defaultMode, overrides: {} });
   }, []);
 
-  const value = useMemo(() => ({ preferences, setPreference }), [preferences, setPreference]);
+  const setPreference = useCallback((playerCode: number, preference: PlayerVisualPreference) => {
+    setSettings((current) => ({
+      ...current,
+      overrides: { ...current.overrides, [String(playerCode)]: preference },
+    }));
+  }, []);
+
+  const clearPreference = useCallback((playerCode: number) => {
+    setSettings((current) => {
+      const key = String(playerCode);
+      if (!(key in current.overrides)) return current;
+      const overrides = { ...current.overrides };
+      delete overrides[key];
+      return { ...current, overrides };
+    });
+  }, []);
+
+  const value = useMemo(() => ({
+    defaultMode: settings.defaultMode,
+    preferences: settings.overrides,
+    setDefaultMode,
+    setPreference,
+    clearPreference,
+  }), [settings, setDefaultMode, setPreference, clearPreference]);
   return <PlayerVisualContext.Provider value={value}>{children}</PlayerVisualContext.Provider>;
 }
 
+export function usePlayerVisualMode() {
+  const { defaultMode, preferences, setDefaultMode } = useContext(PlayerVisualContext);
+  return { mode: defaultMode, setMode: setDefaultMode, overrides: preferences };
+}
+
 export function usePlayerVisualPreference(playerCode: number | null | undefined) {
-  const { preferences, setPreference } = useContext(PlayerVisualContext);
-  const preference = playerCode ? preferences[String(playerCode)] ?? 'photo' : 'photo';
+  const { defaultMode, preferences, setPreference, clearPreference } = useContext(PlayerVisualContext);
+  const key = playerCode === null || playerCode === undefined ? null : String(playerCode);
+  const override = key ? preferences[key] : undefined;
+  const preference = override ?? defaultMode;
   const updatePreference = useCallback((next: PlayerVisualPreference) => {
-    if (playerCode) setPreference(playerCode, next);
+    if (playerCode !== null && playerCode !== undefined) setPreference(playerCode, next);
   }, [playerCode, setPreference]);
-  return { preference, setPreference: updatePreference };
+  const removePreference = useCallback(() => {
+    if (playerCode !== null && playerCode !== undefined) clearPreference(playerCode);
+  }, [clearPreference, playerCode]);
+  return { preference, override, setPreference: updatePreference, clearPreference: removePreference };
 }
 
 export function TeamBadge({ team, size = 'md' }: { team: TeamSummary; size?: 'sm' | 'md' | 'lg' }) {

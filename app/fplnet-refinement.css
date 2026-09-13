@@ -767,6 +767,31 @@
 }
 
 @media (max-width: 860px) {
+  .connect-workspace {
+    min-height: 0;
+  }
+
+  .connect-form-wrap {
+    order: -1;
+    min-height: 0;
+    padding: 28px 24px 32px;
+    grid-template-rows: auto auto;
+    gap: 32px;
+  }
+
+  .connect-form-wrap form {
+    width: 100%;
+    max-width: 640px;
+    margin-inline: auto;
+    align-self: start;
+  }
+
+  .connect-form-wrap .form-rule {
+    width: 100%;
+    max-width: 640px;
+    margin-inline: auto;
+  }
+
   .mobile-nav {
     grid-template-columns: repeat(9, minmax(62px, 1fr));
     scroll-behavior: smooth;

@@ -9,7 +9,11 @@ export async function GET(request: NextRequest) {
 
   try {
     const data = await getDashboard(Number(value));
-    return NextResponse.json(data, { headers: { 'Cache-Control': 'private, max-age=30' } });
+    return NextResponse.json(data, {
+      headers: {
+        'Cache-Control': 'public, max-age=30, s-maxage=120, stale-while-revalidate=600',
+      },
+    });
   } catch (reason) {
     const status = (reason as Error & { status?: number }).status;
     if (status === 404) return NextResponse.json({ error: 'No FPL manager was found with that ID.' }, { status: 404 });

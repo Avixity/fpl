@@ -7,7 +7,11 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: 'Invalid player ID.' }, { status: 400 });
   }
   try {
-    return NextResponse.json(await getPlayerSummary(Number(value)));
+    return NextResponse.json(await getPlayerSummary(Number(value)), {
+      headers: {
+        'Cache-Control': 'public, max-age=60, s-maxage=900, stale-while-revalidate=3600',
+      },
+    });
   } catch {
     return NextResponse.json({ error: 'Player history is temporarily unavailable.' }, { status: 502 });
   }

@@ -8,6 +8,11 @@ const nextConfig: NextConfig = {
         hostname: 'resources.premierleague.com',
         pathname: '/premierleague/photos/players/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'fantasy.premierleague.com',
+        pathname: '/dist/img/shirts/standard/**',
+      },
     ],
   },
   turbopack: {

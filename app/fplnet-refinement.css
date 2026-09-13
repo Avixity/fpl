@@ -248,6 +248,10 @@
   color: var(--ink-2);
 }
 
+.mobile-switch {
+  display: none;
+}
+
 .guide-page {
   background: radial-gradient(circle at 82% 20%, rgb(82 217 255 / 5%), transparent 28%), var(--surface-0);
 }
@@ -379,7 +383,7 @@
 
 .squad-drafts-layout {
   display: grid;
-  grid-template-columns: minmax(620px, 1fr) 350px;
+  grid-template-columns: minmax(560px, 1fr) minmax(280px, 330px);
   align-items: start;
 }
 
@@ -588,6 +592,15 @@
 @media (max-width: 860px) {
   .mobile-nav {
     grid-template-columns: repeat(9, minmax(62px, 1fr));
+    scrollbar-width: none;
+  }
+
+  .mobile-nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .mobile-switch {
+    display: inline-flex;
   }
 
   .brand-reserved.compact {

@@ -44,3 +44,6 @@ next-env.d.ts
 /.wrangler/
 /outputs/
 /work/
+
+# Local source copies for deployed club tiles
+/team_tiles/

@@ -46,14 +46,18 @@ export function expectedMinutes(player: FplPlayer, completedGameweeks: number): 
 function fixtureForTeam(fixture: FplFixture, teamId: number, teams: Map<number, FplTeam>): PlayerFixture {
   const home = fixture.team_h === teamId;
   const opponentId = home ? fixture.team_a : fixture.team_h;
+  const opponent = teams.get(opponentId);
   return {
     id: fixture.id,
     event: fixture.event ?? 0,
     opponentId,
-    opponent: teams.get(opponentId)?.short_name ?? '—',
+    opponent: opponent?.short_name ?? '—',
+    opponentName: opponent?.name ?? 'Unavailable',
+    opponentCode: opponent?.code ?? null,
     home,
     difficulty: home ? fixture.team_h_difficulty : fixture.team_a_difficulty,
     kickoff: fixture.kickoff_time,
+    projectedPoints: 0,
   };
 }
 
@@ -84,6 +88,10 @@ export function playerView(
     .map((fixture) => fixtureForTeam(fixture, player.team, teams));
   const minutes = expectedMinutes(player, completedGameweeks);
   const points = future.map((fixture) => projectedPoints(player, minutes, fixture.difficulty));
+  const projectedFixtures = future.map((fixture, index) => ({
+    ...fixture,
+    projectedPoints: points[index] ?? 0,
+  }));
   const next = points[0] ?? 0;
   const projection: PlayerProjection = {
     next,
@@ -96,9 +104,11 @@ export function playerView(
 
   return {
     id: player.id,
+    playerCode: player.code,
     name: player.web_name,
     fullName: `${player.first_name} ${player.second_name}`.trim(),
     teamId: player.team,
+    teamCode: team?.code ?? null,
     team: team?.name ?? 'Unavailable',
     teamShort: team?.short_name ?? '—',
     position: POSITION_NAMES[player.element_type - 1] ?? 'FWD',
@@ -123,7 +133,7 @@ export function playerView(
     priceChangePercent: player.price_change_percent === null ? null : numeric(player.price_change_percent),
     priceLikelihood: player.price_change_projections?.[0]?.likelihood ?? null,
     priceCalibrating: player.price_change_calibrating,
-    fixtures: future,
+    fixtures: projectedFixtures,
     projection,
   };
 }

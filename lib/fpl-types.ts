@@ -18,6 +18,15 @@ export type FplTeam = {
   strength: number;
 };
 
+export type FplChipDefinition = {
+  id: number;
+  name: string;
+  number: number;
+  start_event: number;
+  stop_event: number;
+  chip_type: 'transfer' | 'team';
+};
+
 export type PriceProjection = {
   offset: number;
   projected_percent: string;
@@ -82,6 +91,7 @@ export type FplFixture = {
 };
 
 export type Bootstrap = {
+  chips: FplChipDefinition[];
   events: FplEvent[];
   teams: FplTeam[];
   elements: FplPlayer[];
@@ -144,9 +154,12 @@ export type PlayerFixture = {
   event: number;
   opponentId: number;
   opponent: string;
+  opponentName: string;
+  opponentCode: number | null;
   home: boolean;
   difficulty: number;
   kickoff: string | null;
+  projectedPoints: number;
 };
 
 export type PlayerProjection = {
@@ -160,9 +173,11 @@ export type PlayerProjection = {
 
 export type PlayerView = {
   id: number;
+  playerCode: number;
   name: string;
   fullName: string;
   teamId: number;
+  teamCode: number | null;
   team: string;
   teamShort: string;
   position: 'GK' | 'DEF' | 'MID' | 'FWD';
@@ -189,6 +204,16 @@ export type PlayerView = {
   priceCalibrating: boolean;
   fixtures: PlayerFixture[];
   projection: PlayerProjection;
+};
+
+export type ChipStatus = {
+  id: number;
+  name: string;
+  label: string;
+  startEvent: number;
+  stopEvent: number;
+  usedEvent: number | null;
+  status: 'used' | 'available' | 'upcoming' | 'expired';
 };
 
 export type SquadPlayer = PlayerView & {
@@ -230,6 +255,9 @@ export type DashboardData = {
   entryHistory: EntryHistory | null;
   history: EntryHistory[];
   chips: Array<{ name: string; event: number; time: string }>;
+  chipStatuses: ChipStatus[];
+  events: FplEvent[];
+  teams: FplTeam[];
   transfers: Array<Record<string, unknown>>;
   squad: SquadPlayer[];
   players: PlayerView[];

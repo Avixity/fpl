@@ -1,16 +1,10 @@
 import type { Metadata } from 'next';
-import { Barlow_Condensed, Manrope } from 'next/font/google';
+import { Inter } from 'next/font/google';
 import './globals.css';
 
-const manrope = Manrope({
-  variable: '--font-manrope',
+const inter = Inter({
+  variable: '--font-inter',
   subsets: ['latin'],
-});
-
-const barlow = Barlow_Condensed({
-  variable: '--font-barlow',
-  subsets: ['latin'],
-  weight: ['500', '600', '700'],
 });
 
 export const metadata: Metadata = {
@@ -25,9 +19,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body
-        className={`${manrope.variable} ${barlow.variable} antialiased`}
-      >
+      <body className={`${inter.variable} antialiased`}>
         {children}
       </body>
     </html>

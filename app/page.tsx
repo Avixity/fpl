@@ -1,8 +1,9 @@
 'use client';
 
 import { SyntheticEvent, useCallback, useEffect, useState } from 'react';
-import { ArrowRight, Database, LoaderCircle, ShieldCheck } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { ArrowRight, CircleHelp, Database, LoaderCircle, ShieldCheck } from 'lucide-react';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { FplDashboard } from '@/components/fpl-dashboard';
 import type { DashboardData } from '@/lib/fpl-types';
@@ -122,13 +123,14 @@ export default function Home() {
           <form onSubmit={submit}>
             <label htmlFor="manager-id">FPL Manager ID</label>
             <div className="manager-input-row">
-              <Input autoComplete="off" id="manager-id" inputMode="numeric" onChange={(event) => setManagerId(event.target.value)} placeholder="e.g. 908661" value={managerId} />
+              <Input autoComplete="off" id="manager-id" inputMode="numeric" onChange={(event) => setManagerId(event.target.value)} placeholder="Enter your Manager ID" value={managerId} />
               <Button aria-label="Connect manager" disabled={loading} size="icon-lg" type="submit">
                 {loading ? <LoaderCircle className="animate-spin" /> : <ArrowRight />}
               </Button>
             </div>
             {error ? <p className="form-error" role="alert">{error}</p> : null}
-            <p className="form-help">Find the number in your FPL team URL after <strong>/entry/</strong>.</p>
+            <p className="form-help">Use the public number from your own FPL team page.</p>
+            <Link className={buttonVariants({ className: 'manager-help-button', variant: 'outline' })} href="/how-to-find-manager-id"><CircleHelp /> How to find your Manager ID</Link>
           </form>
         </div>
       </section>

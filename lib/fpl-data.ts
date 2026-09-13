@@ -1,5 +1,6 @@
 import type {
   Bootstrap,
+  ChipStatus,
   DashboardData,
   EntryHistory,
   FplFixture,
@@ -13,6 +14,41 @@ import { playerView, transferRecommendations } from './predictions';
 import { readCache, recordPredictionRun, writeCache } from './supabase-cache';
 
 const FPL_API = 'https://fantasy.premierleague.com/api';
+
+const CHIP_LABELS: Record<string, string> = {
+  wildcard: 'Wildcard',
+  freehit: 'Free Hit',
+  bboost: 'Bench Boost',
+  '3xc': 'Triple Captain',
+};
+
+function buildChipStatuses(
+  definitions: Bootstrap['chips'],
+  usedChips: Array<{ name: string; event: number; time: string }>,
+  currentGameweek: number,
+): ChipStatus[] {
+  return definitions.map((chip) => {
+    const used = usedChips.find(
+      (item) => item.name === chip.name && item.event >= chip.start_event && item.event <= chip.stop_event,
+    );
+    const status: ChipStatus['status'] = used
+      ? 'used'
+      : currentGameweek < chip.start_event
+        ? 'upcoming'
+        : currentGameweek > chip.stop_event
+          ? 'expired'
+          : 'available';
+    return {
+      id: chip.id,
+      name: chip.name,
+      label: CHIP_LABELS[chip.name] ?? chip.name,
+      startEvent: chip.start_event,
+      stopEvent: chip.stop_event,
+      usedEvent: used?.event ?? null,
+      status,
+    };
+  });
+}
 
 async function fplFetch<T>(path: string, ttlSeconds: number): Promise<T> {
   const cacheKey = path.replace(/^\//, '').replace(/\/$/, '').replaceAll('/', ':') || 'root';
@@ -131,6 +167,9 @@ export async function getDashboard(managerId: number): Promise<DashboardData> {
     entryHistory: picksData.entry_history ?? null,
     history: historyData.current ?? [],
     chips: historyData.chips ?? [],
+    chipStatuses: buildChipStatuses(bootstrap.chips ?? [], historyData.chips ?? [], publishedGameweek),
+    events: bootstrap.events,
+    teams: bootstrap.teams,
     transfers,
     squad,
     players,

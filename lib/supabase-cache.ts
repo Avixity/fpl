@@ -7,13 +7,21 @@ function config() {
 }
 
 function headers(key: string, extra?: Record<string, string>): HeadersInit {
-  return {
+  const requestHeaders: Record<string, string> = {
     apikey: key,
-    Authorization: `Bearer ${key}`,
     'Content-Type': 'application/json',
     'User-Agent': 'fpl-server/1.0',
     ...extra,
   };
+
+  // Supabase's current sb_secret_* keys are API keys, not JWTs. Sending one as
+  // a bearer token makes PostgREST reject an otherwise valid server request.
+  // Legacy service_role JWTs still need the Authorization header.
+  if (!key.startsWith('sb_secret_') && !key.startsWith('sb_publishable_')) {
+    requestHeaders.Authorization = `Bearer ${key}`;
+  }
+
+  return requestHeaders;
 }
 
 export async function readCache<T>(cacheKey: string): Promise<T | null> {

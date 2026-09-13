@@ -223,6 +223,10 @@
   white-space: nowrap;
 }
 
+.matrix-opponent .club-identity {
+  font-size: 13px;
+}
+
 .fixture-pill {
   min-height: 38px;
   padding: 5px 9px 5px 6px;
@@ -592,7 +596,13 @@
 @media (max-width: 860px) {
   .mobile-nav {
     grid-template-columns: repeat(9, minmax(62px, 1fr));
+    scroll-behavior: smooth;
+    scroll-snap-type: x proximity;
     scrollbar-width: none;
+  }
+
+  .mobile-nav button {
+    scroll-snap-align: center;
   }
 
   .mobile-nav::-webkit-scrollbar {
@@ -630,8 +640,17 @@
     font-size: 14px;
   }
 
+  .fixture-list {
+    grid-template-columns: 1fr;
+  }
+
+  .fixture-list > div {
+    min-height: 92px;
+    padding: 13px 20px;
+  }
+
   .tile-team {
-    font-size: 9px;
+    font-size: 10px;
   }
 
   .squad-role {
@@ -639,7 +658,16 @@
     left: calc(50% - 36px);
     min-width: 22px;
     height: 22px;
-    font-size: 9px;
+    font-size: 10px;
+  }
+
+  .pitch {
+    min-height: 780px;
+    padding-block: 46px;
+  }
+
+  .pitch-row {
+    min-height: 138px;
   }
 
   .squad-drafts-header {
@@ -657,12 +685,12 @@
   }
 
   .squad-drafts-pitch {
-    min-height: 650px;
-    padding: 24px 8px;
+    min-height: 760px;
+    padding: 34px 8px;
   }
 
   .squad-drafts-row {
-    min-height: 120px;
+    min-height: 138px;
     gap: 3px;
   }
 
@@ -680,11 +708,11 @@
   }
 
   .draft-player-copy strong {
-    font-size: 11px;
+    font-size: 12px;
   }
 
   .draft-player-copy small {
-    font-size: 10px !important;
+    font-size: 11px !important;
   }
 
   .draft-player-actions button:last-child {
@@ -693,5 +721,9 @@
 
   .squad-drafts-bench {
     display: block;
+  }
+
+  .full-fixture-list .club-identity {
+    font-size: 14px;
   }
 }

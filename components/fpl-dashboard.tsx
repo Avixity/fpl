@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowDownRight, ArrowLeftRight, ArrowRight, ArrowUpRight, BrainCircuit,
   CalendarDays, ChartNoAxesCombined, Check, ChevronRight, ClipboardList, Clock3, Flame,
@@ -67,8 +67,13 @@ function FixtureDots({ player, limit = 3 }: { player: PlayerView; limit?: number
 
 function pendingLiveFixture(player: SquadPlayer) {
   const fixture = player.fixtures[0];
-  if (!fixture || (player.liveMinutes ?? 0) > 0 || (player.livePoints ?? 0) !== 0) return null;
+  if (!fixture || player.liveMinutes === null || player.livePoints === null || player.liveMinutes > 0 || player.livePoints !== 0) return null;
   return fixture;
+}
+
+function liveSquadValue(player: SquadPlayer, applyMultiplier = true) {
+  if (player.livePoints === null || player.liveMinutes === null) return '—';
+  return `${player.livePoints * (applyMultiplier ? player.multiplier : 1)} pts`;
 }
 
 function PlayerStatus({ player }: { player: PlayerView }) {
@@ -118,7 +123,7 @@ function SquadTile({ player, mode, selectPlayer }: { player: SquadPlayer; mode: 
   const value = mode === 'live'
     ? pendingFixture
       ? <FixturePill fixture={pendingFixture} />
-      : `${(player.livePoints ?? 0) * player.multiplier} pts`
+      : liveSquadValue(player)
     : mode === 'price'
       ? `£${player.price.toFixed(1)}`
       : player.projection.next.toFixed(1);
@@ -130,7 +135,7 @@ function SquadView({ data, selectPlayer }: { data: DashboardData; selectPlayer: 
   const starters = data.squad.filter((player) => player.squadPosition <= 11);
   const bench = data.squad.filter((player) => player.squadPosition > 11).sort((a, b) => a.squadPosition - b.squadPosition);
   const rows = [1, 2, 3, 4].map((positionId) => starters.filter((player) => player.positionId === positionId));
-  return <><PageHeading kicker={`Published ${data.currentEvent?.name ?? `GW${data.publishedGameweek}`} squad · ${data.manager.name}`} title="Squad" aside={<div className="segmented">{([['xpts', 'Next xPts'], ['live', 'Live'], ['price', 'Price']] as const).map(([id, label]) => <button className={mode === id ? 'active' : ''} key={id} onClick={() => setMode(id)} type="button">{label}</button>)}</div>} /><div className="squad-layout"><section className="pitch" aria-label="Published squad formation"><div className="pitch-circle" /><div className="pitch-box top" /><div className="pitch-box bottom" />{rows.map((row, rowIndex) => <div className="pitch-row" key={rowIndex}>{row.map((player) => <SquadTile key={player.id} mode={mode} player={player} selectPlayer={selectPlayer} />)}</div>)}</section><aside className="bench-panel"><div className="panel-head"><div><p className="eyebrow">Order matters</p><h2>Bench</h2></div></div>{bench.map((player, index) => { const pendingFixture = pendingLiveFixture(player); return <button className="bench-row" key={player.id} onClick={() => selectPlayer(player)} type="button"><span>0{index + 1}</span><PlayerVisual player={player} size="sm" /><div><strong>{player.name}</strong><small>{player.position} · {player.team}</small></div><em>{mode === 'price' ? money(player.price) : mode === 'live' ? pendingFixture ? <FixturePill fixture={pendingFixture} /> : `${player.livePoints ?? 0} pts` : `${player.projection.next.toFixed(1)} xPts`}</em></button>; })}<div className="bench-note"><Info /> This is the last published squad. Saved transfer drafts do not change it.</div></aside></div></>;
+  return <><PageHeading kicker={`Published ${data.currentEvent?.name ?? `GW${data.publishedGameweek}`} squad · ${data.manager.name}`} title="Squad" aside={<div className="segmented">{([['xpts', 'Next xPts'], ['live', 'Live'], ['price', 'Price']] as const).map(([id, label]) => <button className={mode === id ? 'active' : ''} key={id} onClick={() => setMode(id)} type="button">{label}</button>)}</div>} /><div className="squad-layout"><section className="pitch" aria-label="Published squad formation"><div className="pitch-circle" /><div className="pitch-box top" /><div className="pitch-box bottom" />{rows.map((row, rowIndex) => <div className="pitch-row" key={rowIndex}>{row.map((player) => <SquadTile key={player.id} mode={mode} player={player} selectPlayer={selectPlayer} />)}</div>)}</section><aside className="bench-panel"><div className="panel-head"><div><p className="eyebrow">Order matters</p><h2>Bench</h2></div></div>{bench.map((player, index) => { const pendingFixture = pendingLiveFixture(player); return <button className="bench-row" key={player.id} onClick={() => selectPlayer(player)} type="button"><span>0{index + 1}</span><PlayerVisual player={player} size="sm" /><div><strong>{player.name}</strong><small>{player.position} · {player.team}</small></div><em>{mode === 'price' ? money(player.price) : mode === 'live' ? pendingFixture ? <FixturePill fixture={pendingFixture} /> : liveSquadValue(player, false) : `${player.projection.next.toFixed(1)} xPts`}</em></button>; })}<div className="bench-note"><Info /> This is the last published squad. Saved transfer drafts do not change it.</div></aside></div></>;
 }
 
 function RecommendationRow({ item, choose }: { item: TransferRecommendation; choose: (item: TransferRecommendation) => void }) {
@@ -223,6 +228,18 @@ function RankView({ data }: { data: DashboardData }) {
 }
 
 export function FplDashboard({ data, onSwitchManager, onRefresh, refreshing }: { data: DashboardData; onSwitchManager: () => void; onRefresh: () => void; refreshing: boolean }) {
-  const [active, setActive] = useState<ViewId>('home'); const [selectedPlayer, setSelectedPlayer] = useState<PlayerView | null>(null); const ActiveIcon = NAVIGATION.find((item) => item.id === active)?.icon ?? Home;
-  return <main className="app-shell"><aside className="desktop-nav"><div aria-label="FPLnet" className="brand-reserved compact"><strong>FPL</strong><span>net</span></div><nav>{NAVIGATION.map((item) => { const Icon = item.icon; return <button aria-current={active === item.id ? 'page' : undefined} className={active === item.id ? 'active' : ''} key={item.id} onClick={() => setActive(item.id)} type="button"><Icon /><span>{item.label}</span></button>; })}</nav><div className="nav-manager"><span>{data.manager.player_first_name.charAt(0)}{data.manager.player_last_name.charAt(0)}</span><div><strong>{data.manager.name}</strong><button onClick={onSwitchManager} type="button">Switch manager</button></div></div></aside><div className="app-body"><header className="app-topbar"><div className="mobile-title"><ActiveIcon /><span>{NAVIGATION.find((item) => item.id === active)?.label}</span></div><div className="team-identity"><span>{data.manager.name}</span><small>{data.manager.player_first_name} {data.manager.player_last_name}</small></div><div className="topbar-actions"><span><Clock3 /> {deadlineLabel(data.nextEvent?.deadline_time)}</span><Button aria-label="Switch manager" className="mobile-switch" onClick={onSwitchManager} size="icon-sm" variant="ghost"><ArrowLeftRight /></Button><Button aria-label="Refresh data" disabled={refreshing} onClick={onRefresh} size="icon-sm" variant="ghost"><RefreshCw className={refreshing ? 'animate-spin' : ''} /></Button></div></header><div className="app-content">{active === 'home' ? <HomeView data={data} go={setActive} selectPlayer={setSelectedPlayer} /> : null}{active === 'squad' ? <SquadView data={data} selectPlayer={setSelectedPlayer} /> : null}{active === 'drafts' ? <SquadDraftManager data={data} onOpenPlayer={setSelectedPlayer} /> : null}{active === 'transfers' ? <TransferView data={data} /> : null}{active === 'players' ? <PlayersView data={data} selectPlayer={setSelectedPlayer} /> : null}{active === 'predictions' ? <PredictionsView data={data} selectPlayer={setSelectedPlayer} /> : null}{active === 'fixtures' ? <FixturesView data={data} /> : null}{active === 'live' ? <LiveView data={data} selectPlayer={setSelectedPlayer} /> : null}{active === 'rank' ? <RankView data={data} /> : null}</div></div><nav className="mobile-nav">{NAVIGATION.map((item) => { const Icon = item.icon; return <button aria-current={active === item.id ? 'page' : undefined} className={active === item.id ? 'active' : ''} key={item.id} onClick={() => setActive(item.id)} type="button"><Icon /><span>{item.label === 'Transfer Lab' ? 'Lab' : item.label}</span></button>; })}</nav><PlayerDrawer onClose={() => setSelectedPlayer(null)} player={selectedPlayer} /></main>;
+  const [active, setActive] = useState<ViewId>('home');
+  const [selectedPlayer, setSelectedPlayer] = useState<PlayerView | null>(null);
+  const mobileNavRef = useRef<HTMLElement>(null);
+  const ActiveIcon = NAVIGATION.find((item) => item.id === active)?.icon ?? Home;
+
+  useEffect(() => {
+    const nav = mobileNavRef.current;
+    const activeButton = nav?.querySelector<HTMLElement>('[aria-current="page"]');
+    if (!nav || !activeButton) return;
+    const left = activeButton.offsetLeft - (nav.clientWidth - activeButton.clientWidth) / 2;
+    nav.scrollTo({ left: Math.max(0, left), behavior: 'smooth' });
+  }, [active]);
+
+  return <main className="app-shell"><aside className="desktop-nav"><div aria-label="FPLnet" className="brand-reserved compact"><strong>FPL</strong><span>net</span></div><nav>{NAVIGATION.map((item) => { const Icon = item.icon; return <button aria-current={active === item.id ? 'page' : undefined} className={active === item.id ? 'active' : ''} key={item.id} onClick={() => setActive(item.id)} type="button"><Icon /><span>{item.label}</span></button>; })}</nav><div className="nav-manager"><span>{data.manager.player_first_name.charAt(0)}{data.manager.player_last_name.charAt(0)}</span><div><strong>{data.manager.name}</strong><button onClick={onSwitchManager} type="button">Switch manager</button></div></div></aside><div className="app-body"><header className="app-topbar"><div className="mobile-title"><ActiveIcon /><span>{NAVIGATION.find((item) => item.id === active)?.label}</span></div><div className="team-identity"><span>{data.manager.name}</span><small>{data.manager.player_first_name} {data.manager.player_last_name}</small></div><div className="topbar-actions"><span><Clock3 /> {deadlineLabel(data.nextEvent?.deadline_time)}</span><Button aria-label="Switch manager" className="mobile-switch" onClick={onSwitchManager} size="icon-sm" variant="ghost"><ArrowLeftRight /></Button><Button aria-label="Refresh data" disabled={refreshing} onClick={onRefresh} size="icon-sm" variant="ghost"><RefreshCw className={refreshing ? 'animate-spin' : ''} /></Button></div></header><div className="app-content">{active === 'home' ? <HomeView data={data} go={setActive} selectPlayer={setSelectedPlayer} /> : null}{active === 'squad' ? <SquadView data={data} selectPlayer={setSelectedPlayer} /> : null}{active === 'drafts' ? <SquadDraftManager data={data} onOpenPlayer={setSelectedPlayer} /> : null}{active === 'transfers' ? <TransferView data={data} /> : null}{active === 'players' ? <PlayersView data={data} selectPlayer={setSelectedPlayer} /> : null}{active === 'predictions' ? <PredictionsView data={data} selectPlayer={setSelectedPlayer} /> : null}{active === 'fixtures' ? <FixturesView data={data} /> : null}{active === 'live' ? <LiveView data={data} selectPlayer={setSelectedPlayer} /> : null}{active === 'rank' ? <RankView data={data} /> : null}</div></div><nav className="mobile-nav" ref={mobileNavRef}>{NAVIGATION.map((item) => { const Icon = item.icon; return <button aria-current={active === item.id ? 'page' : undefined} className={active === item.id ? 'active' : ''} key={item.id} onClick={() => setActive(item.id)} type="button"><Icon /><span>{item.label === 'Transfer Lab' ? 'Lab' : item.label}</span></button>; })}</nav><PlayerDrawer onClose={() => setSelectedPlayer(null)} player={selectedPlayer} /></main>;
 }

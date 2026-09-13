@@ -104,7 +104,9 @@ function pendingLiveFixtures(player: SquadPlayer, data: DashboardData): PlayerFi
 }
 
 function SquadFixtureValue({ fixtures }: { fixtures: PlayerFixture[] }) {
-  return <span className="squad-pending-fixtures">{fixtures.map((fixture) => <span className="squad-pending-fixture" key={fixture.id} title={`${fixture.opponentName} ${fixture.home ? 'at home' : 'away'}`}><TeamBadge size="sm" team={{ code: fixture.opponentCode ?? 0, name: fixture.opponentName, short_name: fixture.opponent }} /><strong>{fixture.opponent}</strong><small>{fixture.home ? 'H' : 'A'}</small></span>)}</span>;
+  const fixture = fixtures[0];
+  if (!fixture) return null;
+  return <span className="squad-pending-fixtures"><span className="squad-pending-fixture" title={`${fixture.opponentName} ${fixture.home ? 'at home' : 'away'}`}><TeamBadge size="sm" team={{ code: fixture.opponentCode ?? 0, name: fixture.opponentName, short_name: fixture.opponent }} /><strong>{fixture.opponent}</strong><small>{fixture.home ? 'H' : 'A'}</small></span></span>;
 }
 
 function liveSquadValue(player: SquadPlayer, applyMultiplier = true) {

@@ -10,10 +10,9 @@ import type {
   ManagerProfile,
   SquadPlayer,
 } from './fpl-types';
+import { fetchFplJson } from './fpl-client';
 import { playerView, transferRecommendations } from './predictions';
 import { readCache, recordPredictionRun, writeCache } from './supabase-cache';
-
-const FPL_API = 'https://fantasy.premierleague.com/api';
 
 const CHIP_LABELS: Record<string, string> = {
   wildcard: 'Wildcard',
@@ -55,18 +54,17 @@ async function fplFetch<T>(path: string, ttlSeconds: number): Promise<T> {
   const cached = await readCache<T>(cacheKey);
   if (cached) return cached;
 
-  const response = await fetch(`${FPL_API}${path}`, {
-    headers: { 'User-Agent': 'fpl-server/1.0', Accept: 'application/json' },
-    signal: AbortSignal.timeout(12000),
-  });
-  if (!response.ok) {
-    const error = new Error(`FPL request failed with ${response.status}`) as Error & { status?: number };
-    error.status = response.status;
-    throw error;
-  }
-  const payload = (await response.json()) as T;
+  const payload = await fetchFplJson<T>(path);
   void writeCache(cacheKey, payload, ttlSeconds);
   return payload;
+}
+
+async function optionalFplFetch<T>(path: string, ttlSeconds: number, fallback: T): Promise<T> {
+  try {
+    return await fplFetch<T>(path, ttlSeconds);
+  } catch {
+    return fallback;
+  }
 }
 
 async function leagueSummary(league: ManagerProfile['leagues']['classic'][number], managerId: number): Promise<LeagueView> {
@@ -109,13 +107,14 @@ export async function getDashboard(managerId: number): Promise<DashboardData> {
       `/entry/${managerId}/event/${publishedGameweek}/picks/`,
       120,
     ),
-    fplFetch<{ current: EntryHistory[]; chips: Array<{ name: string; event: number; time: string }> }>(
+    optionalFplFetch<{ current: EntryHistory[]; chips: Array<{ name: string; event: number; time: string }> }>(
       `/entry/${managerId}/history/`,
       300,
+      { current: [], chips: [] },
     ),
-    fplFetch<Array<Record<string, unknown>>>(`/entry/${managerId}/transfers/`, 300),
+    optionalFplFetch<Array<Record<string, unknown>>>(`/entry/${managerId}/transfers/`, 300, []),
     currentEvent
-      ? fplFetch<{ elements: LiveElement[] }>(`/event/${currentEvent.id}/live/`, 45)
+      ? optionalFplFetch<{ elements: LiveElement[] }>(`/event/${currentEvent.id}/live/`, 45, { elements: [] })
       : Promise.resolve({ elements: [] }),
   ]);
 

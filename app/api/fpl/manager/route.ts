@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-
-const FPL_API = 'https://fantasy.premierleague.com/api';
+import { fetchFplJson, FplUpstreamError } from '@/lib/fpl-client';
 
 export async function GET(request: NextRequest) {
   const managerId = request.nextUrl.searchParams.get('id')?.trim();
@@ -10,24 +9,14 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const response = await fetch(`${FPL_API}/entry/${managerId}/`, {
-      headers: { 'User-Agent': 'FPL decision dashboard/1.0' },
-      signal: AbortSignal.timeout(8000),
-    });
-
-    if (response.status === 404) {
-      return NextResponse.json({ error: 'No FPL manager was found with that ID.' }, { status: 404 });
-    }
-
-    if (!response.ok) {
-      return NextResponse.json({ error: 'FPL is unavailable right now. Try again shortly.' }, { status: 502 });
-    }
-
-    const manager = await response.json();
+    const manager = await fetchFplJson(`/entry/${managerId}/`);
     return NextResponse.json(manager, {
       headers: { 'Cache-Control': 'public, max-age=60, s-maxage=300' },
     });
-  } catch {
+  } catch (reason) {
+    if (reason instanceof FplUpstreamError && reason.status === 404) {
+      return NextResponse.json({ error: 'No FPL manager was found with that ID.' }, { status: 404 });
+    }
     return NextResponse.json({ error: 'Unable to reach FPL right now.' }, { status: 502 });
   }
 }
